@@ -1,1 +1,0 @@
-/usr/bin/cc    CMakeFiles/diag_server.dir/diag_app.c.o  -o diag_server  -pthread 

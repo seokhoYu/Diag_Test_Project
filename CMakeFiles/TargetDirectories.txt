@@ -1,3 +1,0 @@
-/home/chrisyu/Git_Project/CMakeFiles/rebuild_cache.dir
-/home/chrisyu/Git_Project/CMakeFiles/edit_cache.dir
-/home/chrisyu/Git_Project/CMakeFiles/diag_server.dir

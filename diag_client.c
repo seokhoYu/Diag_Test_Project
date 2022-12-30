@@ -72,10 +72,10 @@ int Create_SOCK_Client (char* ip_adrress, uint32_t port, struct sockaddr_in* ser
     printf("Client SOCKET Create Fail\n");
     }
 
-    //memset(&serverAddr,0,sizeof(*serverAddr));
+    memset(serverAddr,0,sizeof(serverAddr));
     serverAddr->sin_family = AF_INET;
     serverAddr->sin_addr.s_addr = inet_addr(ip_adrress);   
-    serverAddr->sin_port=htonl(port);
+    serverAddr->sin_port=htons(port);
     return clnt_sock;
 }
 
@@ -90,12 +90,8 @@ int main(int argc, char* argv[]){
     uint32_t serv_port = atoi(argv[2]);
     struct sockaddr_in serverAddr;
     int sockaddr_len;
-    int clnt_sock = socket(PF_INET,SOCK_STREAM,0);
-    memset( &serverAddr, 0, sizeof(serverAddr) );
-    serverAddr.sin_family = AF_INET;
-    serverAddr.sin_addr.s_addr = inet_addr(argv[1]);   
-    serverAddr.sin_port=htonl(atoi(argv[2]));
-    //Create_SOCK_Client(argv[1],serv_port,&serverAddr);
+    int clnt_sock = Create_SOCK_Client(argv[1],serv_port,&serverAddr);
+   
     sockaddr_len = sizeof(serverAddr);
     if(clnt_sock==-1){
         printf("Create_SOCK_Client() fail\n");

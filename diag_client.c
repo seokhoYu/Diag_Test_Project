@@ -12,9 +12,14 @@
 #define input_lenth 2
 #define max_lenth 1400
 
-uint8_t Physical_Req_ECU[0] = 0x05;
-uint8_t Physical_Res_ECU[0] = 0xB1;
+uint8_t Physical_Req_ECU[2] = {0x05,0xB1};
+uint8_t Physical_Res_ECU[2] = {0x05,0xB9};
 
+uint8_t Physical_Req_CCU[2] = {0x05,0xD1};
+uint8_t Physical_Res_CCU[2] = {0x05,0xD9};
+
+struct sockaddr_in serverAddr;
+int ret = -1;
 
 void Start_Menu(){
     printf("------- Diag Message Start -------\n");
@@ -86,19 +91,75 @@ int Create_SOCK_Client (char* ip_adrress, uint32_t port, struct sockaddr_in* ser
     return clnt_sock;
 }
 
+void* Receive_from_Server(void* socket){
+    uint8_t res_message[max_lenth];
+    uint32_t receive_lenth;
+    int sock = *(int*)socket;
+    printf("Receive Thread Start\n");
+    while((receive_lenth=read(sock,res_message,max_lenth))!=0){
+        printf("Respose Message lenth: %d\n",receive_lenth);
+        for(int i=0; i<receive_lenth;i++){
+            printf("Receive Data: %04x\n",res_message[i]);
+        }
+
+    }
+}
+
 void Send_Session_Control(int sock){
     uint8_t message[max_lenth];
-    message[0] = 0xCA;
-    message[1] = 0xFC;
-    message[2] = 0xBC;
-    message[3] = 0x00;
-    message[4] = 0x00;
-    message[5] = 0x00;
-    message[6] = 0x0A;
-    
+    int index = 0;
+    message[index++] = 0xCA;
+    message[index++] = 0xFC;
+    message[index++] = 0xBC;
+    message[index++] = 0x00;
+    message[index++] = 0x00;
+    message[index++] = 0x00;
+    message[index++] = 0x0A;
+    message[index++] = Physical_Req_CCU[0];
+    message[index++] = Physical_Req_ECU[1];
+    message[index++] = 0x10;
+    message[index++] = 0x03;
 
-    write(sock,message,4);
+    write(sock,message,index+1);
 
+}
+
+void* RUN_MENU_AND_CONNECT(void* socket){
+    char Key_input[input_lenth];
+    int clnt_sock = *(int*)socket;
+    // int ret=-1;
+    pthread_t thr_read;
+
+    while(1){
+    Start_Menu();
+    fputs("Input message on Key Board!! \n",stdout);
+    fgets(Key_input, input_lenth, stdin);
+
+    switch(Key_input[0]){
+        case 'q':
+        ret = connect(clnt_sock,(struct sockaddr*)&serverAddr,sizeof(serverAddr));
+        if(ret!=-1){
+            printf("Cnnected Sever....\n");
+        }
+        else{
+            printf("Connect() Fail\n");
+        }
+        pthread_create(&thr_read,NULL,Receive_from_Server,(void*)&clnt_sock);
+        break;
+
+        case 's':
+        printf("Session Control Start!!\n");
+        Send_Session_Control(clnt_sock);
+        break;
+
+        case 'c':
+        printf("Disconnected Ehtnernet Connection!\n");
+        pthread_cancel(thr_read);
+        close(clnt_sock);
+        break;
+    }
+  }
+  pthread_join(thr_read,NULL);
 }
 
 int main(int argc, char* argv[]){
@@ -110,11 +171,13 @@ int main(int argc, char* argv[]){
   
     /* server port string -> integer */
     uint32_t serv_port = atoi(argv[2]);
-    struct sockaddr_in serverAddr;
+    //struct sockaddr_in serverAddr;
     int sockaddr_len;
     int clnt_sock = Create_SOCK_Client(argv[1],serv_port,&serverAddr);
-    int ret;
+    // int ret=-1;
     sockaddr_len = sizeof(serverAddr);
+    pthread_t thr_read;
+    pthread_t thr_menu;
     if(clnt_sock==-1){
         printf("Create_SOCK_Client() fail\n");
     }
@@ -129,35 +192,43 @@ int main(int argc, char* argv[]){
     //     printf("Connected Server....\n");
     // }
 
-    while(1){
+    // while(1){
     
-    Start_Menu();
-    fputs("Input message on Key Board!! \n",stdout);
-    fgets(Key_input, input_lenth, stdin);
+    // Start_Menu();
+    // fputs("Input message on Key Board!! \n",stdout);
+    // fgets(Key_input, input_lenth, stdin);
 
-    switch(Key_input[0]){
-        case 'q':
-        ret = connect(clnt_sock,(struct sockaddr*)&serverAddr,sizeof(serverAddr));
-        if(ret!=-1){
-            printf("Cnnected Sever....\n");
-        }
-        else{
-            printf("Connect() Fail\n");
-        }
-        break;
+    // switch(Key_input[0]){
+    //     case 'q':
+    //     ret = connect(clnt_sock,(struct sockaddr*)&serverAddr,sizeof(serverAddr));
+    //     if(ret!=-1){
+    //         printf("Cnnected Sever....\n");
+    //     }
+    //     else{
+    //         printf("Connect() Fail\n");
+    //     }
+    //    // pthread_create(&thr_read,NULL,Receive_from_Server,(void*)&clnt_sock);
+    //     break;
 
-        case 's':
-        printf("Session Control Start!!\n");
-        Send_Session_Control(clnt_sock);
-        break;
+    //     case 's':
+    //     printf("Session Control Start!!\n");
+    //     Send_Session_Control(clnt_sock);
+    //     break;
 
-        case 'c':
-        printf("Disconnected Ehtnernet Connection!\n");
-        close(clnt_sock);
-    }
-    memset(Key_input,0,sizeof(Key_input));
+    //     case 'c':
+    //     printf("Disconnected Ehtnernet Connection!\n");
+    //     close(clnt_sock);
+    //     pthread_join(thr_read,NULL);
+    // }
+    pthread_create(&thr_menu,NULL,RUN_MENU_AND_CONNECT,(void*)&clnt_sock);
+    
+//    if(ret!=-1){
+//        pthread_create(&thr_read,NULL,Receive_from_Server,(void*)&clnt_sock);
+//     }
+    
+    pthread_join(thr_menu,NULL);
+   // pthread_join(thr_read,NULL);
 
-    }
 
 
 

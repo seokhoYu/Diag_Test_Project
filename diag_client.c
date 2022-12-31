@@ -20,6 +20,8 @@ uint8_t Physical_Res_CCU[2] = {0x05,0xD9};
 
 struct sockaddr_in serverAddr;
 int ret = -1;
+char* server_ip;
+uint32_t server_port;
 
 void Start_Menu(){
     printf("------- Diag Message Start -------\n");
@@ -126,7 +128,8 @@ void Send_Session_Control(int sock){
 
 void* RUN_MENU_AND_CONNECT(void* socket){
     char Key_input[input_lenth];
-    int clnt_sock = *(int*)socket;
+    int clnt_sock;
+    //int clnt_sock = *(int*)socket;
     // int ret=-1;
     pthread_t thr_read;
 
@@ -137,6 +140,7 @@ void* RUN_MENU_AND_CONNECT(void* socket){
 
     switch(Key_input[0]){
         case 'q':
+        clnt_sock = Create_SOCK_Client(server_ip,server_port,&serverAddr);
         ret = connect(clnt_sock,(struct sockaddr*)&serverAddr,sizeof(serverAddr));
         if(ret!=-1){
             printf("Cnnected Sever....\n");
@@ -145,6 +149,7 @@ void* RUN_MENU_AND_CONNECT(void* socket){
             printf("Connect() Fail\n");
         }
         pthread_create(&thr_read,NULL,Receive_from_Server,(void*)&clnt_sock);
+        printf("thr_id : %ld\n",thr_read);
         break;
 
         case 's':
@@ -156,11 +161,13 @@ void* RUN_MENU_AND_CONNECT(void* socket){
         printf("Disconnected Ehtnernet Connection!\n");
         pthread_cancel(thr_read);
         close(clnt_sock);
+        return NULL;
         break;
     }
   }
   pthread_join(thr_read,NULL);
 }
+
 
 int main(int argc, char* argv[]){
     char Key_input[input_lenth];
@@ -168,70 +175,24 @@ int main(int argc, char* argv[]){
         printf("Usage : %s <IP> <PORT>\n",argv[0]);
         exit(1);
     }
-  
     /* server port string -> integer */
-    uint32_t serv_port = atoi(argv[2]);
-    //struct sockaddr_in serverAddr;
+    server_ip = argv[1];
+    server_port = atoi(argv[2]);
     int sockaddr_len;
-    int clnt_sock = Create_SOCK_Client(argv[1],serv_port,&serverAddr);
-    // int ret=-1;
-    sockaddr_len = sizeof(serverAddr);
-    pthread_t thr_read;
+    // int clnt_sock = Create_SOCK_Client(argv[1],serv_port,&serverAddr);
     pthread_t thr_menu;
-    if(clnt_sock==-1){
-        printf("Create_SOCK_Client() fail\n");
-    }
-    else{
-        printf("Create Sock Success\n");
-    }
-
-    // if(connect(clnt_sock,(struct sockaddr*)&serverAddr,sizeof(serverAddr))==-1){
-    //     printf("Connect() Fail\n");
+    // if(clnt_sock==-1){
+    //     printf("Create_SOCK_Client() fail\n");
     // }
     // else{
-    //     printf("Connected Server....\n");
+    //     printf("Create Sock Success\n");
     // }
-
-    // while(1){
-    
-    // Start_Menu();
-    // fputs("Input message on Key Board!! \n",stdout);
-    // fgets(Key_input, input_lenth, stdin);
-
-    // switch(Key_input[0]){
-    //     case 'q':
-    //     ret = connect(clnt_sock,(struct sockaddr*)&serverAddr,sizeof(serverAddr));
-    //     if(ret!=-1){
-    //         printf("Cnnected Sever....\n");
-    //     }
-    //     else{
-    //         printf("Connect() Fail\n");
-    //     }
-    //    // pthread_create(&thr_read,NULL,Receive_from_Server,(void*)&clnt_sock);
-    //     break;
-
-    //     case 's':
-    //     printf("Session Control Start!!\n");
-    //     Send_Session_Control(clnt_sock);
-    //     break;
-
-    //     case 'c':
-    //     printf("Disconnected Ehtnernet Connection!\n");
-    //     close(clnt_sock);
-    //     pthread_join(thr_read,NULL);
-    // }
-    pthread_create(&thr_menu,NULL,RUN_MENU_AND_CONNECT,(void*)&clnt_sock);
-    
-//    if(ret!=-1){
-//        pthread_create(&thr_read,NULL,Receive_from_Server,(void*)&clnt_sock);
-//     }
-    
+    pthread_create(&thr_menu,NULL,RUN_MENU_AND_CONNECT,NULL);
+    // pthread_create(&thr_menu,NULL,RUN_MENU_AND_CONNECT,(void*)&clnt_sock);
     pthread_join(thr_menu,NULL);
-   // pthread_join(thr_read,NULL);
-
+  
 
 
 
 
 }
-
